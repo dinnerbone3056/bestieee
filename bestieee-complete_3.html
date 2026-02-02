@@ -230,32 +230,104 @@
 
         const DEFAULT_CONTENT = {
           hero: {
-            title: "Welcome to Bestieee's World",
-            subtitle: "A little universe made just for you",
-            image: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1920' height='1080'%3E%3Cdefs%3E%3ClinearGradient id='a' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' stop-color='%231a1a2e'/%3E%3Cstop offset='50%25' stop-color='%2316213e'/%3E%3Cstop offset='100%25' stop-color='%230f3460'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='1920' height='1080' fill='url(%23a)'/%3E%3C/svg%3E"
+            title: "Bestieee+ Originals",
+            subtitle: "A collection of moments, moods, and memories",
+            image: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1920' height='1080'%3E%3Cdefs%3E%3ClinearGradient id='a' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' stop-color='%230b0b0f'/%3E%3Cstop offset='50%25' stop-color='%231b1b2f'/%3E%3Cstop offset='100%25' stop-color='%231f1020'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='1920' height='1080' fill='url(%23a)'/%3E%3C/svg%3E"
           },
           about: {
-            personality: "A soul that shines bright in every room, bringing warmth and light wherever they go. Bestieee has this incredible ability to make everyone feel seen, heard, and valued.",
-            nature: "Calm like the morning breeze, gentle like the first rays of sunshine. There's something peaceful about their presence that makes the world feel a little softer.",
-            special: "What makes Bestieee truly special isn't just one thing – it's the way they laugh, the way they care, the way they make ordinary moments feel extraordinary. It's the little things that add up to something beautiful."
+            personality: "A soul that turns ordinary moments into little celebrations — warm, witty, and effortlessly kind.",
+            nature: "Gentle presence, calm energy, and a smile that makes everything feel lighter.",
+            special: "She makes people feel seen. The way she listens, laughs, and cares is her quiet superpower."
           },
-          photos: { memories: [], smiles: [], random: [] },
-          favorites: { movies: [], food: [] },
-          messages: []
+          featuredMoments: [],
+          memories: [],
+          music: {
+            spotifyEmbedUrl: "https://open.spotify.com/embed/playlist/37i9dQZF1DX0XUfTFmNBRM?utm_source=generator",
+            tracks: [
+              { id: 1, title: "Golden Hour", artist: "JVKE", reason: "Every sunset reminds me of her glow." },
+              { id: 2, title: "Ocean Eyes", artist: "Billie Eilish", reason: "Soft, cinematic, and unforgettable." }
+            ]
+          },
+          moviesShows: [
+            { id: 1, title: "Little Women", description: "Elegant, heartfelt, and full of cozy vibes.", image: "" },
+            { id: 2, title: "La La Land", description: "A dreamy mix of music, love, and what-ifs.", image: "" }
+          ],
+          littleThings: [
+            { id: 1, text: "Always sends the cutest voice notes." },
+            { id: 2, text: "Laughs like she means it — contagious energy." },
+            { id: 3, text: "Says “I’m just five minutes away” (it’s never five minutes)." }
+          ],
+          privateNotes: {
+            password: "bestie",
+            hint: "Her favorite nickname",
+            letters: [
+              { id: 1, title: "For the days you need it", text: "I hope you remember how loved you are. Always.", date: "April 2024" }
+            ]
+          }
+        };
+
+        const normalizeContent = (data) => {
+          if (!data || Object.keys(data).length === 0) {
+            return JSON.parse(JSON.stringify(DEFAULT_CONTENT));
+          }
+
+          const normalized = JSON.parse(JSON.stringify(DEFAULT_CONTENT));
+          normalized.hero = { ...normalized.hero, ...(data.hero || {}) };
+          normalized.about = { ...normalized.about, ...(data.about || {}) };
+          normalized.featuredMoments = Array.isArray(data.featuredMoments)
+            ? data.featuredMoments
+            : (data.photos?.memories || []);
+
+          const legacyPhotos = data.photos ? Object.values(data.photos).flat() : [];
+          normalized.memories = Array.isArray(data.memories)
+            ? data.memories
+            : legacyPhotos.map((photo) => ({
+              id: photo.id || Date.now() + Math.random(),
+              src: photo.src,
+              caption: photo.caption || ""
+            }));
+
+          normalized.music = { ...normalized.music, ...(data.music || {}) };
+          normalized.music.tracks = Array.isArray(data.music?.tracks) ? data.music.tracks : normalized.music.tracks;
+
+          normalized.moviesShows = Array.isArray(data.moviesShows)
+            ? data.moviesShows
+            : (data.favorites?.movies || []);
+
+          normalized.littleThings = Array.isArray(data.littleThings)
+            ? data.littleThings
+            : (data.favorites?.food || normalized.littleThings);
+
+          normalized.privateNotes = { ...normalized.privateNotes, ...(data.privateNotes || {}) };
+          if (Array.isArray(data.messages) && normalized.privateNotes.letters.length === 0) {
+            normalized.privateNotes.letters = data.messages.map((msg) => ({
+              id: msg.id || Date.now() + Math.random(),
+              title: msg.title || "Note",
+              text: msg.text || "",
+              date: msg.date || ""
+            }));
+          }
+
+          return normalized;
         };
 
         function BestieeUniverse() {
           const [editMode, setEditMode] = useState(false);
           const [lightbox, setLightbox] = useState(null);
+          const [activePage, setActivePage] = useState('home');
+          const [notesUnlocked, setNotesUnlocked] = useState(false);
+          const [notesError, setNotesError] = useState('');
+          const [passwordInput, setPasswordInput] = useState('');
+          const [activeMovie, setActiveMovie] = useState(null);
           const [content, setContent] = useState(() => {
-            return (EMBEDDED_DATA && Object.keys(EMBEDDED_DATA).length > 0) ? EMBEDDED_DATA : DEFAULT_CONTENT;
+            return normalizeContent(EMBEDDED_DATA);
           });
 
-          const handleImageUpload = (category, subcategory = null) => {
+          const handleImageUpload = (category, payload = null) => {
             const input = document.createElement('input');
             input.type = 'file';
             input.accept = 'image/*';
-            input.multiple = category === 'photos';
+            input.multiple = category === 'featured' || category === 'memories';
             
             input.onchange = (e) => {
               Array.from(e.target.files).forEach(file => {
@@ -265,14 +337,20 @@
                     const newContent = JSON.parse(JSON.stringify(prev));
                     if (category === 'hero') {
                       newContent.hero.image = event.target.result;
-                    } else if (category === 'photos') {
-                      newContent.photos[subcategory].push({
+                    } else if (category === 'featured') {
+                      newContent.featuredMoments.push({
                         id: Date.now() + Math.random(),
                         src: event.target.result
                       });
-                    } else if (category === 'favorites') {
-                      const idx = newContent.favorites[subcategory.category].findIndex(i => i.id === subcategory.id);
-                      if (idx !== -1) newContent.favorites[subcategory.category][idx].image = event.target.result;
+                    } else if (category === 'memories') {
+                      newContent.memories.push({
+                        id: Date.now() + Math.random(),
+                        src: event.target.result,
+                        caption: 'A memory worth replaying.'
+                      });
+                    } else if (category === 'movies') {
+                      const idx = newContent.moviesShows.findIndex(item => item.id === payload);
+                      if (idx !== -1) newContent.moviesShows[idx].image = event.target.result;
                     }
                     return newContent;
                   });
@@ -281,6 +359,16 @@
               });
             };
             input.click();
+          };
+
+          const openLightbox = (items, idx) => {
+            if (!items || items.length === 0) return;
+            setLightbox({ items, idx });
+          };
+
+          const navigate = (page) => {
+            setActivePage(page);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
           };
 
           const exportData = () => {
@@ -294,8 +382,8 @@
                   <strong>Instructions:</strong><br>
                   1. Click "Copy Data" below<br>
                   2. Open this HTML file in a text editor (Notepad, VS Code, etc.)<br>
-                  3. Find: <code style="background:#333;padding:2px 6px;border-radius:3px;">const EMBEDDED_DATA = {};</code><br>
-                  4. Replace <code style="background:#333;padding:2px 6px;">{ }</code> with your copied data<br>
+                  3. Find: <code style="background:#333;padding:2px 6px;border-radius:3px;">const EMBEDDED_DATA =</code><br>
+                  4. Replace the object there with your copied data<br>
                   5. Save the file and send it to your bestie!
                 </p>
                 <textarea id="export-data" readonly style="width:100%;height:300px;background:#000;border:2px solid #e50914;border-radius:4px;padding:16px;color:#46d369;font-size:12px;font-family:monospace;margin-bottom:20px;">${dataStr}</textarea>
@@ -312,8 +400,32 @@
             document.body.appendChild(modal);
           };
 
+          const navItems = [
+            { id: 'home', label: 'Home' },
+            { id: 'featured', label: 'Featured Moments' },
+            { id: 'memories', label: 'Memories' },
+            { id: 'music', label: 'Music' },
+            { id: 'movies', label: 'Movies & Shows' },
+            { id: 'little', label: 'Little Things' },
+            { id: 'notes', label: 'Private Notes' },
+            { id: 'about', label: 'About' }
+          ];
+
           return (
             <div style={{background:'#141414',minHeight:'100vh',color:'#fff',fontFamily:'"Netflix Sans","Helvetica Neue",Helvetica,Arial,sans-serif'}}>
+              <style>{`
+                * { box-sizing: border-box; }
+                .nav-button { background: transparent; border: none; color: #b3b3b3; font-size: 14px; cursor: pointer; padding: 8px 12px; border-radius: 999px; transition: all 0.2s ease; }
+                .nav-button.active, .nav-button:hover { color: #fff; background: rgba(229,9,20,0.2); }
+                .row-scroll { display: flex; gap: 16px; overflow-x: auto; padding-bottom: 16px; scroll-behavior: smooth; }
+                .card { background: rgba(42,42,42,0.6); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; overflow: hidden; transition: transform 0.3s ease, box-shadow 0.3s ease; }
+                .card:hover { transform: translateY(-6px) scale(1.01); box-shadow: 0 16px 40px rgba(0,0,0,0.35); }
+                .pill { padding: 6px 14px; border-radius: 999px; background: rgba(229,9,20,0.15); color: #e50914; font-size: 12px; }
+                .section-title { font-size: 48px; font-weight: 700; margin-bottom: 32px; }
+                @media (max-width: 900px) {
+                  .section-title { font-size: 32px; }
+                }
+              `}</style>
               
               {/* Edit Controls */}
               {editMode && (
@@ -330,217 +442,342 @@
                 {editMode ? <Icons.X size={24} /> : <Icons.Edit size={24} />}
               </button>
 
-              {/* Hero Section */}
-              <section style={{height:'100vh',position:'relative',display:'flex',alignItems:'center',justifyContent:'center',overflow:'hidden'}}>
-                <div style={{position:'absolute',top:0,left:0,width:'100%',height:'100%',backgroundImage:`url(${content.hero.image})`,backgroundSize:'cover',backgroundPosition:'center'}} />
-                <div style={{position:'absolute',top:0,left:0,width:'100%',height:'100%',background:'linear-gradient(to top, #141414 0%, rgba(20,20,20,0.8) 40%, rgba(20,20,20,0.4) 100%)'}} />
-                
-                <div style={{position:'relative',zIndex:10,textAlign:'center',maxWidth:'900px',padding:'0 32px'}}>
+              <nav style={{position:'sticky',top:0,zIndex:1200,backdropFilter:'blur(18px)',background:'rgba(10,10,10,0.85)',padding:'20px 5%',borderBottom:'1px solid rgba(255,255,255,0.06)',display:'flex',alignItems:'center',justifyContent:'space-between',gap:'24px',flexWrap:'wrap'}}>
+                <div style={{display:'flex',alignItems:'center',gap:'16px'}}>
+                  <span style={{color:'#e50914',fontWeight:'700',fontSize:'20px',letterSpacing:'0.03em'}}>BESTIEEEE</span>
+                  <span className="pill">Private streaming</span>
+                </div>
+                <div style={{display:'flex',flexWrap:'wrap',gap:'8px'}}>
+                  {navItems.map(item => (
+                    <button key={item.id} onClick={() => navigate(item.id)} className={`nav-button ${activePage === item.id ? 'active' : ''}`}>
+                      {item.label}
+                    </button>
+                  ))}
+                </div>
+              </nav>
+
+              {activePage === 'home' && (
+                <section style={{height:'100vh',position:'relative',display:'flex',alignItems:'center',justifyContent:'center',overflow:'hidden'}}>
+                  <div style={{position:'absolute',top:0,left:0,width:'100%',height:'100%',backgroundImage:`url(${content.hero.image})`,backgroundSize:'cover',backgroundPosition:'center'}} />
+                  <div style={{position:'absolute',top:0,left:0,width:'100%',height:'100%',background:'linear-gradient(to top, #0b0b0f 0%, rgba(10,10,10,0.65) 40%, rgba(10,10,10,0.2) 100%)'}} />
+                  <div style={{position:'relative',zIndex:10,textAlign:'center',maxWidth:'920px',padding:'0 32px'}}>
+                    {editMode && (
+                      <button onClick={() => handleImageUpload('hero')} style={{position:'absolute',top:'-60px',right:0,padding:'12px 20px',background:'rgba(229,9,20,0.2)',border:'1px solid rgba(229,9,20,0.4)',borderRadius:'4px',color:'#e50914',cursor:'pointer',display:'flex',alignItems:'center',gap:'8px',fontSize:'14px'}}>
+                        <Icons.Upload size={16} />
+                        Change Image
+                      </button>
+                    )}
+                    {editMode ? (
+                      <>
+                        <input value={content.hero.title} onChange={(e) => setContent({...content,hero:{...content.hero,title:e.target.value}})} style={{fontSize:'68px',fontWeight:'700',color:'#fff',marginBottom:'24px',background:'rgba(0,0,0,0.55)',border:'2px solid rgba(229,9,20,0.3)',borderRadius:'8px',padding:'20px',width:'100%',outline:'none',fontFamily:'inherit'}} />
+                        <input value={content.hero.subtitle} onChange={(e) => setContent({...content,hero:{...content.hero,subtitle:e.target.value}})} style={{fontSize:'22px',color:'#fff',marginBottom:'40px',background:'rgba(0,0,0,0.55)',border:'2px solid rgba(229,9,20,0.3)',borderRadius:'8px',padding:'16px',width:'100%',outline:'none',fontFamily:'inherit'}} />
+                      </>
+                    ) : (
+                      <>
+                        <h1 style={{fontSize:'68px',fontWeight:'700',color:'#fff',marginBottom:'24px',textShadow:'2px 2px 4px rgba(0,0,0,0.9)',letterSpacing:'-0.02em'}}>{content.hero.title}</h1>
+                        <p style={{fontSize:'22px',color:'#fff',marginBottom:'40px',textShadow:'2px 2px 4px rgba(0,0,0,0.9)'}}>{content.hero.subtitle}</p>
+                      </>
+                    )}
+                    <div style={{display:'flex',justifyContent:'center',gap:'16px',flexWrap:'wrap'}}>
+                      <button onClick={() => navigate('featured')} style={{padding:'14px 32px 14px 28px',background:'#fff',border:'none',borderRadius:'6px',color:'#000',fontSize:'18px',fontWeight:'600',cursor:'pointer',display:'inline-flex',alignItems:'center',gap:'12px'}}>
+                        <Icons.Play size={24} fill="#000" />
+                        Play Highlights
+                      </button>
+                      <button onClick={() => navigate('notes')} style={{padding:'14px 32px',background:'rgba(255,255,255,0.15)',border:'1px solid rgba(255,255,255,0.2)',borderRadius:'6px',color:'#fff',fontSize:'18px',fontWeight:'500',cursor:'pointer'}}>
+                        Private Notes
+                      </button>
+                    </div>
+                  </div>
+                </section>
+              )}
+
+              {activePage === 'featured' && (
+                <section style={{padding:'120px 5%',background:'#0b0b0f'}}>
+                  <h2 className="section-title">Featured Moments</h2>
+                  <p style={{color:'#b3b3b3',marginBottom:'32px'}}>A cinematic highlight reel of her best moments.</p>
                   {editMode && (
-                    <button onClick={() => handleImageUpload('hero')} style={{position:'absolute',top:'-60px',right:0,padding:'12px 20px',background:'rgba(229,9,20,0.2)',border:'1px solid rgba(229,9,20,0.4)',borderRadius:'4px',color:'#e50914',cursor:'pointer',display:'flex',alignItems:'center',gap:'8px',fontSize:'14px'}}>
-                      <Icons.Upload size={16} />
-                      Change Image
+                    <button onClick={() => handleImageUpload('featured')} style={{padding:'10px 20px',background:'rgba(229,9,20,0.2)',border:'1px solid rgba(229,9,20,0.4)',borderRadius:'6px',color:'#e50914',cursor:'pointer',display:'inline-flex',alignItems:'center',gap:'8px',fontSize:'14px',marginBottom:'24px'}}>
+                      <Icons.Plus size={16} />
+                      Add Featured Photos
                     </button>
                   )}
-
-                  {editMode ? (
-                    <>
-                      <input value={content.hero.title} onChange={(e) => setContent({...content,hero:{...content.hero,title:e.target.value}})} style={{fontSize:'72px',fontWeight:'700',color:'#fff',marginBottom:'24px',background:'rgba(0,0,0,0.5)',border:'2px solid rgba(229,9,20,0.3)',borderRadius:'4px',padding:'20px',width:'100%',outline:'none',fontFamily:'inherit'}} />
-                      <input value={content.hero.subtitle} onChange={(e) => setContent({...content,hero:{...content.hero,subtitle:e.target.value}})} style={{fontSize:'24px',color:'#fff',marginBottom:'48px',background:'rgba(0,0,0,0.5)',border:'2px solid rgba(229,9,20,0.3)',borderRadius:'4px',padding:'16px',width:'100%',outline:'none',fontFamily:'inherit'}} />
-                    </>
-                  ) : (
-                    <>
-                      <h1 style={{fontSize:'72px',fontWeight:'700',color:'#fff',marginBottom:'24px',textShadow:'2px 2px 4px rgba(0,0,0,0.9)',letterSpacing:'-0.02em'}}>{content.hero.title}</h1>
-                      <p style={{fontSize:'24px',color:'#fff',marginBottom:'48px',textShadow:'2px 2px 4px rgba(0,0,0,0.9)'}}>{content.hero.subtitle}</p>
-                    </>
-                  )}
-                  
-                  <button onClick={()=>document.getElementById('about-section')?.scrollIntoView({behavior:'smooth'})} style={{padding:'14px 32px 14px 28px',background:'#fff',border:'none',borderRadius:'4px',color:'#000',fontSize:'18px',fontWeight:'600',cursor:'pointer',display:'inline-flex',alignItems:'center',gap:'12px'}}>
-                    <Icons.Play size={24} fill="#000" />
-                    Play
-                  </button>
-                </div>
-              </section>
-
-              {/* About Section */}
-              <section id="about-section" style={{padding:'120px 5%',background:'#141414'}}>
-                <div style={{maxWidth:'1400px',margin:'0 auto'}}>
-                  <h2 style={{fontSize:'56px',fontWeight:'700',marginBottom:'48px',color:'#fff'}}>About Bestieee</h2>
-                  
-                  <div style={{display:'flex',flexDirection:'column',gap:'32px'}}>
-                    {['personality','nature','special'].map(key => (
-                      <div key={key} style={{background:'rgba(42,42,42,0.6)',border:'1px solid rgba(255,255,255,0.1)',borderRadius:'8px',padding:'32px'}}>
-                        <h3 style={{fontSize:'20px',fontWeight:'600',color:'#e50914',marginBottom:'16px',textTransform:'capitalize'}}>
-                          {key === 'special' ? 'What Makes Bestieee Special' : key}
-                        </h3>
-                        {editMode ? (
-                          <textarea value={content.about[key]} onChange={(e)=>setContent({...content,about:{...content.about,[key]:e.target.value}})} style={{width:'100%',minHeight:'100px',background:'rgba(0,0,0,0.4)',border:'1px solid rgba(229,9,20,0.3)',borderRadius:'4px',padding:'16px',color:'#fff',fontSize:'16px',outline:'none',fontFamily:'inherit',resize:'vertical'}} />
-                        ) : (
-                          <p style={{fontSize:'16px',lineHeight:'1.8',color:'#d1d1d1'}}>{content.about[key]}</p>
-                        )}
+                  <div className="row-scroll">
+                    {content.featuredMoments.length === 0 ? (
+                      <div style={{width:'320px',height:'220px',background:'rgba(42,42,42,0.6)',borderRadius:'12px',border:'2px dashed rgba(229,9,20,0.3)',display:'flex',alignItems:'center',justifyContent:'center',color:'#808080',fontSize:'14px'}}>
+                        {editMode ? 'Upload featured photos' : 'No featured moments yet'}
                       </div>
-                    ))}
-                  </div>
-                </div>
-              </section>
-
-              {/* Photo Memories */}
-              <section style={{padding:'120px 5%',background:'#000'}}>
-                <h2 style={{fontSize:'48px',fontWeight:'700',marginBottom:'64px',color:'#fff'}}>Photo Memories</h2>
-                
-                {['memories','smiles','random'].map(category => (
-                  <div key={category} style={{marginBottom:'64px'}}>
-                    <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:'24px'}}>
-                      <h3 style={{fontSize:'28px',fontWeight:'600',color:'#e5e5e5',textTransform:'capitalize'}}>{category}</h3>
-                      {editMode && (
-                        <button onClick={()=>handleImageUpload('photos',category)} style={{padding:'10px 20px',background:'rgba(229,9,20,0.2)',border:'1px solid rgba(229,9,20,0.4)',borderRadius:'4px',color:'#e50914',cursor:'pointer',display:'flex',alignItems:'center',gap:'8px',fontSize:'14px'}}>
-                          <Icons.Plus size={16} />
-                          Add Photos
-                        </button>
-                      )}
-                    </div>
-                    
-                    <div style={{display:'flex',gap:'16px',overflowX:'auto',paddingBottom:'16px'}}>
-                      {content.photos[category].length === 0 ? (
-                        <div style={{width:'300px',height:'200px',background:'rgba(42,42,42,0.6)',borderRadius:'8px',border:'2px dashed rgba(229,9,20,0.3)',display:'flex',alignItems:'center',justifyContent:'center',color:'#808080',fontSize:'14px'}}>
-                          {editMode ? 'Click "Add Photos" to upload' : 'No photos yet'}
+                    ) : (
+                      content.featuredMoments.map((photo, idx) => (
+                        <div key={photo.id} className="card" style={{minWidth:'320px',height:'220px',position:'relative',cursor:'pointer'}} onClick={() => openLightbox(content.featuredMoments, idx)}>
+                          <img src={photo.src} alt="" style={{width:'100%',height:'100%',objectFit:'cover'}} />
+                          {editMode && (
+                            <button onClick={(e)=>{e.stopPropagation();setContent(prev=>{const n=JSON.parse(JSON.stringify(prev));n.featuredMoments=n.featuredMoments.filter(p=>p.id!==photo.id);return n;})}} style={{position:'absolute',top:'12px',right:'12px',padding:'8px',background:'rgba(229,9,20,0.9)',border:'none',borderRadius:'6px',color:'#fff',cursor:'pointer'}}>
+                              <Icons.Trash size={16} />
+                            </button>
+                          )}
                         </div>
-                      ) : (
-                        content.photos[category].map((photo,idx) => (
-                          <div key={photo.id} onClick={()=>setLightbox({photo,category,idx})} style={{position:'relative',minWidth:'300px',height:'200px',borderRadius:'8px',overflow:'hidden',cursor:'pointer'}}>
-                            <img src={photo.src} alt="" style={{width:'100%',height:'100%',objectFit:'cover'}} />
+                      ))
+                    )}
+                  </div>
+                </section>
+              )}
+
+              {activePage === 'memories' && (
+                <section style={{padding:'120px 5%',background:'#141414'}}>
+                  <h2 className="section-title">Her Favourite Memories</h2>
+                  <p style={{color:'#b3b3b3',marginBottom:'32px'}}>Moments that deserve their own poster wall.</p>
+                  {editMode && (
+                    <button onClick={() => handleImageUpload('memories')} style={{padding:'10px 20px',background:'rgba(229,9,20,0.2)',border:'1px solid rgba(229,9,20,0.4)',borderRadius:'6px',color:'#e50914',cursor:'pointer',display:'inline-flex',alignItems:'center',gap:'8px',fontSize:'14px',marginBottom:'32px'}}>
+                      <Icons.Plus size={16} />
+                      Add Memory
+                    </button>
+                  )}
+                  <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(240px,1fr))',gap:'24px'}}>
+                    {content.memories.length === 0 ? (
+                      <div style={{background:'rgba(42,42,42,0.6)',borderRadius:'12px',border:'2px dashed rgba(229,9,20,0.3)',padding:'64px',textAlign:'center',color:'#808080',gridColumn:'1 / -1'}}>
+                        {editMode ? 'Add memories to build her gallery.' : 'No memories added yet.'}
+                      </div>
+                    ) : (
+                      content.memories.map((memory, idx) => (
+                        <div key={memory.id} className="card" style={{padding:'0',cursor:'pointer'}} onClick={() => openLightbox(content.memories, idx)}>
+                          <div style={{position:'relative'}}>
+                            <img src={memory.src} alt="" style={{width:'100%',height:'220px',objectFit:'cover'}} />
                             {editMode && (
-                              <button onClick={(e)=>{e.stopPropagation();setContent(prev=>{const n=JSON.parse(JSON.stringify(prev));n.photos[category]=n.photos[category].filter(p=>p.id!==photo.id);return n;})}} style={{position:'absolute',top:'12px',right:'12px',padding:'8px',background:'rgba(229,9,20,0.9)',border:'none',borderRadius:'4px',color:'#fff',cursor:'pointer',zIndex:10}}>
+                              <button onClick={(e)=>{e.stopPropagation();setContent(prev=>{const n=JSON.parse(JSON.stringify(prev));n.memories=n.memories.filter(m=>m.id!==memory.id);return n;})}} style={{position:'absolute',top:'12px',right:'12px',padding:'8px',background:'rgba(229,9,20,0.9)',border:'none',borderRadius:'6px',color:'#fff',cursor:'pointer'}}>
                                 <Icons.Trash size={16} />
                               </button>
                             )}
                           </div>
-                        ))
+                          <div style={{padding:'16px'}}>
+                            {editMode ? (
+                              <input value={memory.caption} onChange={(e)=>setContent(prev=>{const n=JSON.parse(JSON.stringify(prev));const index=n.memories.findIndex(m=>m.id===memory.id);n.memories[index].caption=e.target.value;return n;})} style={{width:'100%',background:'rgba(0,0,0,0.4)',border:'1px solid rgba(229,9,20,0.3)',borderRadius:'6px',padding:'10px',color:'#fff',fontSize:'14px',outline:'none',fontFamily:'inherit'}} />
+                            ) : (
+                              <p style={{color:'#d1d1d1',fontSize:'14px',lineHeight:'1.5'}}>{memory.caption}</p>
+                            )}
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </section>
+              )}
+
+              {activePage === 'music' && (
+                <section style={{padding:'120px 5%',background:'#0b0b0f'}}>
+                  <h2 className="section-title">Favourite Music</h2>
+                  <p style={{color:'#b3b3b3',marginBottom:'32px'}}>Songs that remind me of her — every beat, every lyric.</p>
+                  <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(320px,1fr))',gap:'32px'}}>
+                    <div className="card" style={{padding:'24px'}}>
+                      <h3 style={{fontSize:'20px',marginBottom:'16px'}}>Spotify Playlist</h3>
+                      {editMode && (
+                        <input value={content.music.spotifyEmbedUrl} onChange={(e)=>setContent({...content,music:{...content.music,spotifyEmbedUrl:e.target.value}})} style={{width:'100%',marginBottom:'16px',background:'rgba(0,0,0,0.4)',border:'1px solid rgba(229,9,20,0.3)',borderRadius:'6px',padding:'10px',color:'#fff',fontSize:'13px',outline:'none',fontFamily:'inherit'}} />
                       )}
+                      <iframe title="Spotify" src={content.music.spotifyEmbedUrl} width="100%" height="380" frameBorder="0" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" style={{borderRadius:'12px'}}></iframe>
+                    </div>
+                    <div className="card" style={{padding:'24px'}}>
+                      <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:'16px'}}>
+                        <h3 style={{fontSize:'20px'}}>Songs with Stories</h3>
+                        {editMode && (
+                          <button onClick={()=>setContent(prev=>{const n=JSON.parse(JSON.stringify(prev));n.music.tracks.push({id:Date.now(),title:'New Track',artist:'Artist',reason:'Why it reminds me of her...'});return n;})} style={{padding:'6px 12px',background:'rgba(229,9,20,0.2)',border:'1px solid rgba(229,9,20,0.4)',borderRadius:'999px',color:'#e50914',cursor:'pointer',fontSize:'12px'}}>
+                            + Add
+                          </button>
+                        )}
+                      </div>
+                      <div style={{display:'flex',flexDirection:'column',gap:'16px'}}>
+                        {content.music.tracks.map(track => (
+                          <div key={track.id} style={{borderBottom:'1px solid rgba(255,255,255,0.08)',paddingBottom:'12px'}}>
+                            {editMode ? (
+                              <>
+                                <input value={track.title} onChange={(e)=>setContent(prev=>{const n=JSON.parse(JSON.stringify(prev));const idx=n.music.tracks.findIndex(t=>t.id===track.id);n.music.tracks[idx].title=e.target.value;return n;})} style={{width:'100%',background:'rgba(0,0,0,0.4)',border:'1px solid rgba(229,9,20,0.3)',borderRadius:'6px',padding:'8px',color:'#fff',fontSize:'14px',outline:'none',fontFamily:'inherit',marginBottom:'6px'}} />
+                                <input value={track.artist} onChange={(e)=>setContent(prev=>{const n=JSON.parse(JSON.stringify(prev));const idx=n.music.tracks.findIndex(t=>t.id===track.id);n.music.tracks[idx].artist=e.target.value;return n;})} style={{width:'100%',background:'rgba(0,0,0,0.4)',border:'1px solid rgba(229,9,20,0.3)',borderRadius:'6px',padding:'8px',color:'#d1d1d1',fontSize:'12px',outline:'none',fontFamily:'inherit',marginBottom:'6px'}} />
+                                <textarea value={track.reason} onChange={(e)=>setContent(prev=>{const n=JSON.parse(JSON.stringify(prev));const idx=n.music.tracks.findIndex(t=>t.id===track.id);n.music.tracks[idx].reason=e.target.value;return n;})} style={{width:'100%',background:'rgba(0,0,0,0.4)',border:'1px solid rgba(229,9,20,0.3)',borderRadius:'6px',padding:'8px',color:'#b3b3b3',fontSize:'12px',outline:'none',fontFamily:'inherit'}} />
+                              </>
+                            ) : (
+                              <>
+                                <h4 style={{margin:'0 0 4px 0',fontSize:'16px'}}>{track.title}</h4>
+                                <span style={{color:'#b3b3b3',fontSize:'12px'}}>{track.artist}</span>
+                                <p style={{margin:'8px 0 0',color:'#d1d1d1',fontSize:'13px',lineHeight:'1.6'}}>{track.reason}</p>
+                              </>
+                            )}
+                            {editMode && (
+                              <button onClick={()=>setContent(prev=>{const n=JSON.parse(JSON.stringify(prev));n.music.tracks=n.music.tracks.filter(t=>t.id!==track.id);return n;})} style={{marginTop:'8px',padding:'6px 10px',background:'rgba(229,9,20,0.9)',border:'none',borderRadius:'6px',color:'#fff',cursor:'pointer',fontSize:'12px'}}>
+                                Remove
+                              </button>
+                            )}
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   </div>
-                ))}
-              </section>
+                </section>
+              )}
 
-              {/* Favorites */}
-              <section style={{padding:'120px 5%',background:'#141414'}}>
-                <h2 style={{fontSize:'48px',fontWeight:'700',marginBottom:'64px',color:'#fff'}}>Favorite Things</h2>
-                
-                {['movies','food'].map(category => (
-                  <div key={category} style={{marginBottom:'64px'}}>
-                    <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:'24px'}}>
-                      <h3 style={{fontSize:'28px',fontWeight:'600',color:'#e5e5e5',textTransform:'capitalize'}}>{category}</h3>
-                      {editMode && (
-                        <button onClick={()=>setContent(prev=>{const n=JSON.parse(JSON.stringify(prev));n.favorites[category].push({id:Date.now(),title:'New Item',description:'Add description...',image:null});return n;})} style={{padding:'10px 20px',background:'rgba(229,9,20,0.2)',border:'1px solid rgba(229,9,20,0.4)',borderRadius:'4px',color:'#e50914',cursor:'pointer',display:'flex',alignItems:'center',gap:'8px',fontSize:'14px'}}>
-                          <Icons.Plus size={16} />
-                          Add Item
-                        </button>
-                      )}
-                    </div>
-                    
-                    <div style={{display:'flex',gap:'16px',overflowX:'auto',paddingBottom:'16px'}}>
-                      {content.favorites[category].length === 0 ? (
-                        <div style={{width:'280px',height:'180px',background:'rgba(42,42,42,0.6)',borderRadius:'8px',border:'2px dashed rgba(229,9,20,0.3)',display:'flex',alignItems:'center',justifyContent:'center',color:'#808080',fontSize:'14px'}}>
-                          {editMode ? 'Click "Add Item" to create' : 'No items yet'}
+              {activePage === 'movies' && (
+                <section style={{padding:'120px 5%',background:'#141414'}}>
+                  <h2 className="section-title">Favourite Movies & Shows</h2>
+                  <p style={{color:'#b3b3b3',marginBottom:'32px'}}>Posters with a story behind them.</p>
+                  {editMode && (
+                    <button onClick={()=>setContent(prev=>{const n=JSON.parse(JSON.stringify(prev));n.moviesShows.push({id:Date.now(),title:'New Title',description:'Why she loves it...',image:''});return n;})} style={{padding:'10px 20px',background:'rgba(229,9,20,0.2)',border:'1px solid rgba(229,9,20,0.4)',borderRadius:'6px',color:'#e50914',cursor:'pointer',display:'inline-flex',alignItems:'center',gap:'8px',fontSize:'14px',marginBottom:'24px'}}>
+                      <Icons.Plus size={16} />
+                      Add Movie
+                    </button>
+                  )}
+                  <div className="row-scroll">
+                    {content.moviesShows.map(item => (
+                      <div key={item.id} className="card" style={{minWidth:'220px',cursor:'pointer',position:'relative'}} onClick={() => setActiveMovie(activeMovie === item.id ? null : item.id)}>
+                        {item.image ? (
+                          <img src={item.image} alt={item.title} style={{width:'100%',height:'320px',objectFit:'cover'}} />
+                        ) : (
+                          <div style={{width:'100%',height:'320px',background:'linear-gradient(135deg,#1f1f1f,#2c0c10)',display:'flex',alignItems:'center',justifyContent:'center',color:'#808080',fontSize:'14px'}}>Poster</div>
+                        )}
+                        {editMode && (
+                          <button onClick={(e)=>{e.stopPropagation();handleImageUpload('movies',item.id);}} style={{position:'absolute',top:'12px',right:'12px',padding:'8px',background:'rgba(0,0,0,0.8)',border:'1px solid rgba(229,9,20,0.5)',borderRadius:'6px',color:'#e50914',cursor:'pointer'}}>
+                            <Icons.Camera size={16} />
+                          </button>
+                        )}
+                        <div style={{padding:'16px'}}>
+                          {editMode ? (
+                            <>
+                              <input value={item.title} onChange={(e)=>setContent(prev=>{const n=JSON.parse(JSON.stringify(prev));const idx=n.moviesShows.findIndex(m=>m.id===item.id);n.moviesShows[idx].title=e.target.value;return n;})} style={{width:'100%',background:'rgba(0,0,0,0.4)',border:'1px solid rgba(229,9,20,0.3)',borderRadius:'6px',padding:'8px',color:'#fff',fontSize:'14px',outline:'none',fontFamily:'inherit',marginBottom:'8px'}} />
+                              <textarea value={item.description} onChange={(e)=>setContent(prev=>{const n=JSON.parse(JSON.stringify(prev));const idx=n.moviesShows.findIndex(m=>m.id===item.id);n.moviesShows[idx].description=e.target.value;return n;})} style={{width:'100%',minHeight:'70px',background:'rgba(0,0,0,0.4)',border:'1px solid rgba(229,9,20,0.3)',borderRadius:'6px',padding:'8px',color:'#d1d1d1',fontSize:'12px',outline:'none',fontFamily:'inherit'}} />
+                            </>
+                          ) : (
+                            <>
+                              <h4 style={{margin:'0 0 8px',fontSize:'16px'}}>{item.title}</h4>
+                              {activeMovie === item.id && (
+                                <p style={{color:'#d1d1d1',fontSize:'12px',lineHeight:'1.6'}}>{item.description}</p>
+                              )}
+                            </>
+                          )}
                         </div>
-                      ) : (
-                        content.favorites[category].map(item => (
-                          <div key={item.id} style={{position:'relative',minWidth:'280px',background:'rgba(42,42,42,0.6)',border:'1px solid rgba(255,255,255,0.1)',borderRadius:'8px',overflow:'hidden'}}>
-                            {item.image ? (
-                              <div style={{position:'relative',width:'100%',height:'200px'}}>
-                                <img src={item.image} alt={item.title} style={{width:'100%',height:'100%',objectFit:'cover'}} />
-                                {editMode && (
-                                  <button onClick={()=>handleImageUpload('favorites',{id:item.id,category})} style={{position:'absolute',top:'8px',right:'8px',padding:'8px',background:'rgba(0,0,0,0.8)',border:'1px solid rgba(229,9,20,0.5)',borderRadius:'4px',color:'#e50914',cursor:'pointer'}}>
-                                    <Icons.Camera size={16} />
-                                  </button>
-                                )}
-                              </div>
-                            ) : editMode ? (
-                              <button onClick={()=>handleImageUpload('favorites',{id:item.id,category})} style={{width:'100%',height:'200px',background:'rgba(0,0,0,0.4)',border:'2px dashed rgba(229,9,20,0.3)',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:'8px',cursor:'pointer'}}>
-                                <Icons.Upload size={32} color="#e50914" style={{opacity:0.5}} />
-                                <span style={{color:'#808080',fontSize:'14px'}}>Add Image</span>
-                              </button>
-                            ) : (
-                              <div style={{width:'100%',height:'200px',background:'rgba(0,0,0,0.4)',display:'flex',alignItems:'center',justifyContent:'center'}}>
-                                <Icons.Camera size={48} color="#808080" style={{opacity:0.3}} />
-                              </div>
-                            )}
-                            
-                            <div style={{padding:'24px'}}>
+                        {editMode && (
+                          <button onClick={(e)=>{e.stopPropagation();setContent(prev=>{const n=JSON.parse(JSON.stringify(prev));n.moviesShows=n.moviesShows.filter(m=>m.id!==item.id);return n;})}} style={{position:'absolute',bottom:'12px',right:'12px',padding:'6px',background:'rgba(229,9,20,0.9)',border:'none',borderRadius:'6px',color:'#fff',cursor:'pointer'}}>
+                            <Icons.Trash size={14} />
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              )}
+
+              {activePage === 'little' && (
+                <section style={{padding:'120px 5%',background:'#0b0b0f'}}>
+                  <h2 className="section-title">Little Things About Her</h2>
+                  <p style={{color:'#b3b3b3',marginBottom:'32px'}}>Soft, tiny details that make her unforgettable.</p>
+                  {editMode && (
+                    <button onClick={()=>setContent(prev=>{const n=JSON.parse(JSON.stringify(prev));n.littleThings.push({id:Date.now(),text:'New little thing...'});return n;})} style={{padding:'10px 20px',background:'rgba(229,9,20,0.2)',border:'1px solid rgba(229,9,20,0.4)',borderRadius:'6px',color:'#e50914',cursor:'pointer',display:'inline-flex',alignItems:'center',gap:'8px',fontSize:'14px',marginBottom:'24px'}}>
+                      <Icons.Plus size={16} />
+                      Add Detail
+                    </button>
+                  )}
+                  <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(240px,1fr))',gap:'20px'}}>
+                    {content.littleThings.map(item => (
+                      <div key={item.id} className="card" style={{padding:'24px',position:'relative'}}>
+                        {editMode ? (
+                          <textarea value={item.text} onChange={(e)=>setContent(prev=>{const n=JSON.parse(JSON.stringify(prev));const idx=n.littleThings.findIndex(t=>t.id===item.id);n.littleThings[idx].text=e.target.value;return n;})} style={{width:'100%',minHeight:'90px',background:'rgba(0,0,0,0.4)',border:'1px solid rgba(229,9,20,0.3)',borderRadius:'6px',padding:'12px',color:'#fff',fontSize:'14px',outline:'none',fontFamily:'inherit'}} />
+                        ) : (
+                          <p style={{color:'#d1d1d1',lineHeight:'1.7'}}>{item.text}</p>
+                        )}
+                        {editMode && (
+                          <button onClick={()=>setContent(prev=>{const n=JSON.parse(JSON.stringify(prev));n.littleThings=n.littleThings.filter(t=>t.id!==item.id);return n;})} style={{position:'absolute',top:'12px',right:'12px',padding:'8px',background:'rgba(229,9,20,0.9)',border:'none',borderRadius:'6px',color:'#fff',cursor:'pointer'}}>
+                            <Icons.Trash size={14} />
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              )}
+
+              {activePage === 'notes' && (
+                <section style={{padding:'120px 5%',background:'#141414'}}>
+                  <h2 className="section-title">Private Notes</h2>
+                  <p style={{color:'#b3b3b3',marginBottom:'32px'}}>Password-protected letters for her eyes only.</p>
+                  <div className="card" style={{padding:'32px',maxWidth:'720px',margin:'0 auto'}}>
+                    {!notesUnlocked ? (
+                      <>
+                        <p style={{color:'#d1d1d1',marginBottom:'16px'}}>Hint: {content.privateNotes.hint || 'A secret only she knows.'}</p>
+                        {editMode && (
+                          <input value={content.privateNotes.password} onChange={(e)=>setContent({...content,privateNotes:{...content.privateNotes,password:e.target.value}})} style={{width:'100%',marginBottom:'12px',background:'rgba(0,0,0,0.4)',border:'1px solid rgba(229,9,20,0.3)',borderRadius:'6px',padding:'10px',color:'#fff',fontSize:'14px',outline:'none',fontFamily:'inherit'}} placeholder="Set password" />
+                        )}
+                        {editMode && (
+                          <input value={content.privateNotes.hint} onChange={(e)=>setContent({...content,privateNotes:{...content.privateNotes,hint:e.target.value}})} style={{width:'100%',marginBottom:'12px',background:'rgba(0,0,0,0.4)',border:'1px solid rgba(229,9,20,0.3)',borderRadius:'6px',padding:'10px',color:'#b3b3b3',fontSize:'13px',outline:'none',fontFamily:'inherit'}} placeholder="Hint for password" />
+                        )}
+                        <input type="password" value={passwordInput} onChange={(e)=>setPasswordInput(e.target.value)} style={{width:'100%',marginBottom:'16px',background:'rgba(0,0,0,0.4)',border:'1px solid rgba(229,9,20,0.3)',borderRadius:'6px',padding:'12px',color:'#fff',fontSize:'16px',outline:'none',fontFamily:'inherit'}} placeholder="Enter password to unlock" />
+                        {notesError && <p style={{color:'#e50914',marginBottom:'12px'}}>{notesError}</p>}
+                        <button onClick={() => {
+                          if (passwordInput === content.privateNotes.password) {
+                            setNotesUnlocked(true);
+                            setNotesError('');
+                          } else {
+                            setNotesError('That password doesn’t match.');
+                          }
+                        }} style={{padding:'12px 24px',background:'#e50914',border:'none',borderRadius:'6px',color:'#fff',cursor:'pointer',fontSize:'14px',fontWeight:'600'}}>
+                          Unlock Notes
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        {editMode && (
+                          <button onClick={()=>setContent(prev=>{const n=JSON.parse(JSON.stringify(prev));n.privateNotes.letters.push({id:Date.now(),title:'New Letter',text:'Write your letter here...',date:'Today'});return n;})} style={{padding:'10px 20px',background:'rgba(229,9,20,0.2)',border:'1px solid rgba(229,9,20,0.4)',borderRadius:'6px',color:'#e50914',cursor:'pointer',display:'inline-flex',alignItems:'center',gap:'8px',fontSize:'14px',marginBottom:'24px'}}>
+                            <Icons.Plus size={16} />
+                            Add Letter
+                          </button>
+                        )}
+                        <div style={{display:'flex',flexDirection:'column',gap:'20px'}}>
+                          {content.privateNotes.letters.map(letter => (
+                            <div key={letter.id} style={{background:'rgba(0,0,0,0.4)',borderRadius:'12px',padding:'24px',position:'relative'}}>
                               {editMode && (
-                                <button onClick={()=>setContent(prev=>{const n=JSON.parse(JSON.stringify(prev));n.favorites[category]=n.favorites[category].filter(i=>i.id!==item.id);return n;})} style={{position:'absolute',top:item.image?'208px':'8px',right:'8px',padding:'6px',background:'rgba(229,9,20,0.9)',border:'none',borderRadius:'4px',color:'#fff',cursor:'pointer',zIndex:10}}>
+                                <button onClick={()=>setContent(prev=>{const n=JSON.parse(JSON.stringify(prev));n.privateNotes.letters=n.privateNotes.letters.filter(l=>l.id!==letter.id);return n;})} style={{position:'absolute',top:'12px',right:'12px',padding:'8px',background:'rgba(229,9,20,0.9)',border:'none',borderRadius:'6px',color:'#fff',cursor:'pointer'}}>
                                   <Icons.Trash size={14} />
                                 </button>
                               )}
-                              
                               {editMode ? (
                                 <>
-                                  <input value={item.title} onChange={(e)=>setContent(prev=>{const n=JSON.parse(JSON.stringify(prev));const idx=n.favorites[category].findIndex(i=>i.id===item.id);n.favorites[category][idx].title=e.target.value;return n;})} style={{width:'100%',background:'rgba(0,0,0,0.4)',border:'1px solid rgba(229,9,20,0.3)',borderRadius:'4px',padding:'12px',color:'#fff',fontSize:'18px',fontWeight:'600',marginBottom:'12px',outline:'none',fontFamily:'inherit'}} />
-                                  <textarea value={item.description} onChange={(e)=>setContent(prev=>{const n=JSON.parse(JSON.stringify(prev));const idx=n.favorites[category].findIndex(i=>i.id===item.id);n.favorites[category][idx].description=e.target.value;return n;})} style={{width:'100%',minHeight:'80px',background:'rgba(0,0,0,0.4)',border:'1px solid rgba(229,9,20,0.3)',borderRadius:'4px',padding:'12px',color:'#d1d1d1',fontSize:'14px',outline:'none',fontFamily:'inherit',resize:'vertical'}} />
+                                  <input value={letter.title} onChange={(e)=>setContent(prev=>{const n=JSON.parse(JSON.stringify(prev));const idx=n.privateNotes.letters.findIndex(l=>l.id===letter.id);n.privateNotes.letters[idx].title=e.target.value;return n;})} style={{width:'100%',marginBottom:'12px',background:'rgba(0,0,0,0.4)',border:'1px solid rgba(229,9,20,0.3)',borderRadius:'6px',padding:'10px',color:'#fff',fontSize:'18px',outline:'none',fontFamily:'inherit'}} />
+                                  <input value={letter.date} onChange={(e)=>setContent(prev=>{const n=JSON.parse(JSON.stringify(prev));const idx=n.privateNotes.letters.findIndex(l=>l.id===letter.id);n.privateNotes.letters[idx].date=e.target.value;return n;})} style={{width:'100%',marginBottom:'12px',background:'rgba(0,0,0,0.4)',border:'1px solid rgba(229,9,20,0.3)',borderRadius:'6px',padding:'10px',color:'#b3b3b3',fontSize:'12px',outline:'none',fontFamily:'inherit'}} />
+                                  <textarea value={letter.text} onChange={(e)=>setContent(prev=>{const n=JSON.parse(JSON.stringify(prev));const idx=n.privateNotes.letters.findIndex(l=>l.id===letter.id);n.privateNotes.letters[idx].text=e.target.value;return n;})} style={{width:'100%',minHeight:'120px',background:'rgba(0,0,0,0.4)',border:'1px solid rgba(229,9,20,0.3)',borderRadius:'6px',padding:'10px',color:'#d1d1d1',fontSize:'14px',outline:'none',fontFamily:'inherit'}} />
                                 </>
                               ) : (
                                 <>
-                                  <h4 style={{fontSize:'18px',fontWeight:'600',color:'#fff',marginBottom:'12px'}}>{item.title}</h4>
-                                  <p style={{fontSize:'14px',lineHeight:'1.6',color:'#d1d1d1'}}>{item.description}</p>
+                                  <h3 style={{marginBottom:'8px'}}>{letter.title}</h3>
+                                  <span style={{color:'#b3b3b3',fontSize:'12px'}}>{letter.date}</span>
+                                  <p style={{marginTop:'12px',color:'#d1d1d1',lineHeight:'1.7'}}>{letter.text}</p>
                                 </>
                               )}
                             </div>
-                          </div>
-                        ))
-                      )}
-                    </div>
+                          ))}
+                        </div>
+                      </>
+                    )}
                   </div>
-                ))}
-              </section>
+                </section>
+              )}
 
-              {/* Messages */}
-              <section style={{padding:'120px 5%',background:'#000'}}>
-                <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:'48px'}}>
-                  <h2 style={{fontSize:'48px',fontWeight:'700',color:'#fff'}}>Special Messages 💌</h2>
-                  {editMode && (
-                    <button onClick={()=>setContent(prev=>{const n=JSON.parse(JSON.stringify(prev));n.messages.push({id:Date.now(),title:'New Message',text:'Write your message here...'});return n;})} style={{padding:'12px 24px',background:'rgba(229,9,20,0.2)',border:'1px solid rgba(229,9,20,0.4)',borderRadius:'4px',color:'#e50914',cursor:'pointer',display:'flex',alignItems:'center',gap:'8px',fontSize:'14px'}}>
-                      <Icons.Plus size={16} />
-                      Add Message
-                    </button>
-                  )}
-                </div>
-                
-                <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(400px,1fr))',gap:'32px',maxWidth:'1200px',margin:'0 auto'}}>
-                  {content.messages.length === 0 ? (
-                    <div style={{background:'rgba(42,42,42,0.6)',borderRadius:'8px',border:'2px dashed rgba(229,9,20,0.3)',padding:'64px',textAlign:'center',color:'#808080',gridColumn:'1 / -1'}}>
-                      {editMode ? 'Click "Add Message" to create your first message' : 'No messages yet'}
-                    </div>
-                  ) : (
-                    content.messages.map(msg => (
-                      <div key={msg.id} style={{position:'relative',background:'rgba(42,42,42,0.6)',border:'1px solid rgba(255,255,255,0.1)',borderRadius:'8px',padding:'40px'}}>
-                        <Icons.MessageCircle size={32} color="#e50914" style={{marginBottom:'24px',opacity:0.5}} />
-                        
-                        {editMode && (
-                          <button onClick={()=>setContent(prev=>{const n=JSON.parse(JSON.stringify(prev));n.messages=n.messages.filter(m=>m.id!==msg.id);return n;})} style={{position:'absolute',top:'20px',right:'20px',padding:'8px',background:'rgba(229,9,20,0.9)',border:'none',borderRadius:'4px',color:'#fff',cursor:'pointer'}}>
-                            <Icons.Trash size={16} />
-                          </button>
-                        )}
-                        
+              {activePage === 'about' && (
+                <section style={{padding:'120px 5%',background:'#0b0b0f'}}>
+                  <h2 className="section-title">About Bestieee</h2>
+                  <div style={{display:'flex',flexDirection:'column',gap:'24px',maxWidth:'900px'}}>
+                    {['personality','nature','special'].map(key => (
+                      <div key={key} className="card" style={{padding:'28px'}}>
+                        <h3 style={{fontSize:'18px',fontWeight:'600',color:'#e50914',marginBottom:'12px',textTransform:'capitalize'}}>
+                          {key === 'special' ? 'What Makes Her Special' : key}
+                        </h3>
                         {editMode ? (
-                          <>
-                            <input value={msg.title} onChange={(e)=>setContent(prev=>{const n=JSON.parse(JSON.stringify(prev));const idx=n.messages.findIndex(m=>m.id===msg.id);n.messages[idx].title=e.target.value;return n;})} style={{width:'100%',background:'rgba(0,0,0,0.4)',border:'1px solid rgba(229,9,20,0.3)',borderRadius:'4px',padding:'16px',color:'#fff',fontSize:'24px',fontWeight:'600',marginBottom:'20px',outline:'none',fontFamily:'inherit'}} />
-                            <textarea value={msg.text} onChange={(e)=>setContent(prev=>{const n=JSON.parse(JSON.stringify(prev));const idx=n.messages.findIndex(m=>m.id===msg.id);n.messages[idx].text=e.target.value;return n;})} style={{width:'100%',minHeight:'150px',background:'rgba(0,0,0,0.4)',border:'1px solid rgba(229,9,20,0.3)',borderRadius:'4px',padding:'16px',color:'#d1d1d1',fontSize:'16px',outline:'none',fontFamily:'inherit',resize:'vertical'}} />
-                          </>
+                          <textarea value={content.about[key]} onChange={(e)=>setContent({...content,about:{...content.about,[key]:e.target.value}})} style={{width:'100%',minHeight:'90px',background:'rgba(0,0,0,0.4)',border:'1px solid rgba(229,9,20,0.3)',borderRadius:'6px',padding:'12px',color:'#fff',fontSize:'14px',outline:'none',fontFamily:'inherit'}} />
                         ) : (
-                          <>
-                            <h3 style={{fontSize:'24px',fontWeight:'600',color:'#fff',marginBottom:'20px'}}>{msg.title}</h3>
-                            <p style={{fontSize:'16px',lineHeight:'1.8',color:'#d1d1d1'}}>{msg.text}</p>
-                          </>
+                          <p style={{fontSize:'15px',lineHeight:'1.7',color:'#d1d1d1'}}>{content.about[key]}</p>
                         )}
                       </div>
-                    ))
-                  )}
-                </div>
-              </section>
+                    ))}
+                  </div>
+                </section>
+              )}
 
               {/* Footer */}
-              <footer style={{padding:'80px 5%',background:'#141414',borderTop:'1px solid rgba(255,255,255,0.1)',textAlign:'center'}}>
-                <p style={{fontSize:'18px',color:'#808080'}}>A little universe made just for you ✨</p>
+              <footer style={{padding:'80px 5%',background:'#0b0b0f',borderTop:'1px solid rgba(255,255,255,0.08)',textAlign:'center'}}>
+                <p style={{fontSize:'18px',color:'#808080'}}>Netflix, but her life is the content.</p>
               </footer>
 
               {/* Lightbox */}
@@ -550,18 +787,18 @@
                     <Icons.X size={24} />
                   </button>
                   
-                  {content.photos[lightbox.category].length > 1 && (
+                  {lightbox.items.length > 1 && (
                     <>
-                      <button onClick={(e)=>{e.stopPropagation();const imgs=content.photos[lightbox.category];let newIdx=lightbox.idx-1;if(newIdx<0)newIdx=imgs.length-1;setLightbox({...lightbox,idx:newIdx,photo:imgs[newIdx]});}} style={{position:'absolute',left:'32px',width:'48px',height:'48px',borderRadius:'50%',background:'rgba(255,255,255,0.1)',border:'none',color:'#fff',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center'}}>
+                      <button onClick={(e)=>{e.stopPropagation();let newIdx=lightbox.idx-1;if(newIdx<0)newIdx=lightbox.items.length-1;setLightbox({...lightbox,idx:newIdx});}} style={{position:'absolute',left:'32px',width:'48px',height:'48px',borderRadius:'50%',background:'rgba(255,255,255,0.1)',border:'none',color:'#fff',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center'}}>
                         <Icons.ChevronLeft size={24} />
                       </button>
-                      <button onClick={(e)=>{e.stopPropagation();const imgs=content.photos[lightbox.category];let newIdx=lightbox.idx+1;if(newIdx>=imgs.length)newIdx=0;setLightbox({...lightbox,idx:newIdx,photo:imgs[newIdx]});}} style={{position:'absolute',right:'32px',width:'48px',height:'48px',borderRadius:'50%',background:'rgba(255,255,255,0.1)',border:'none',color:'#fff',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center'}}>
+                      <button onClick={(e)=>{e.stopPropagation();let newIdx=lightbox.idx+1;if(newIdx>=lightbox.items.length)newIdx=0;setLightbox({...lightbox,idx:newIdx});}} style={{position:'absolute',right:'32px',width:'48px',height:'48px',borderRadius:'50%',background:'rgba(255,255,255,0.1)',border:'none',color:'#fff',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center'}}>
                         <Icons.ChevronRight size={24} />
                       </button>
                     </>
                   )}
                   
-                  <img src={lightbox.photo.src} alt="" onClick={(e)=>e.stopPropagation()} style={{maxWidth:'90%',maxHeight:'90%',objectFit:'contain',borderRadius:'4px'}} />
+                  <img src={lightbox.items[lightbox.idx].src} alt="" onClick={(e)=>e.stopPropagation()} style={{maxWidth:'90%',maxHeight:'90%',objectFit:'contain',borderRadius:'8px'}} />
                 </div>
               )}
             </div>
